@@ -1,10 +1,10 @@
 /*
- * cthread.h: arquivo de inclusão com os protótipos das funções a serem
- *            implementadas na realização do trabalho.
+ * cthread.h: arquivo de inclusï¿½o com os protï¿½tipos das funï¿½ï¿½es a serem
+ *            implementadas na realizaï¿½ï¿½o do trabalho.
  *
- * NÃO MODIFIQUE ESTE ARQUIVO.
+ * Nï¿½O MODIFIQUE ESTE ARQUIVO.
  *
- * VERSÃO: 11/09/2017
+ * VERSï¿½O: 11/09/2017
  *
  */
 #ifndef __cthread__
@@ -13,14 +13,14 @@
 #include "support.h"
 
 typedef struct s_sem {
-	int	count;	// indica se recurso está ocupado ou não (livre > 0, ocupado = 0)
-	PFILA2	fila; 	// ponteiro para uma fila de threads bloqueadas no semáforo
+	int	count;	// indica se recurso estï¿½ ocupado ou nï¿½o (livre > 0, ocupado = 0)
+	PFILA2	fila; 	// ponteiro para uma fila de threads bloqueadas no semï¿½foro
 } csem_t;
 
 int cidentify (char *name, int size);
 
 int ccreate (void* (*start)(void*), void *arg, int prio);
-//int csetprio(int tid, int prio);	// Essa função não será utilizada em 2017/2
+//int csetprio(int tid, int prio);	// Essa funï¿½ï¿½o nï¿½o serï¿½ utilizada em 2017/2
 int cyield(void);
 int cjoin(int tid);
 int csem_init(csem_t *sem, int count);
