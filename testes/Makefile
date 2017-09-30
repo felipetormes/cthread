@@ -1,13 +1,17 @@
+#
+# Makefile para nossos programas de teste
+# 
+
 CC=gcc
-INC_DIR=../include/
-BIN_DIR=../bin/
+LIB_DIR=../lib
 
-all: identify
+all: identify createOneThread
 
-identify: identify.c $(BIN_DIR)cthread.o
-		$(CC) -o identify.out identify.c $(INC_DIR)cthread.h $(BIN_DIR)cthread.o -Wall
+identify: identify.c $(LIB_DIR)/libcthread.a
+	$(CC) -m32 -o identifyExe identify.c -L$(LIB_DIR) -lcthread -Wall
 
-
+createOneThread: createOneThread.c $(LIB_DIR)/libcthread.a
+	$(CC) -m32 -o createOneThreadExe createOneThread.c -L$(LIB_DIR) -lcthread -Wall
 
 clean:
-		rm -r *.out
+	rm createOneThread identify *.o
