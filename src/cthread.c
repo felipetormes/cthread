@@ -29,7 +29,7 @@ ucontext_t mainContext;
 ucontext_t* returnContext;
 
 
-int freeTidOnJoin(FILA2 *queue, int id);
+int freeTidOnJoin(int id);
 void escalonador(TCB_t *oldTCB);
 
 int cidentify(char *name, int size){
@@ -45,6 +45,19 @@ int cidentify(char *name, int size){
 
 }
 
+TCB_t* getRemoveFirst(FILA2 *queue) {
+
+	if(FirstFila2(queue)) {
+
+		return NULL;
+	}
+
+	TCB_t *next = (TCB_t*)GetAtIteratorFila2(&aptos);
+
+	DeleteAtIteratorFila2(&aptos);
+
+	return next;
+}
 
 ucontext_t* createContext(ucontext_t* returnContext, void (*func)(), int *argc) {
 
@@ -78,30 +91,13 @@ void finishThread() {
 
 	TCB_t *executing = (TCB_t*)GetAtIteratorFila2(&executando);
 
-	// int toFreeTid = executing->tid;
+	int toFreeTid = executing->tid;
 
 	DeleteAtIteratorFila2(&executando);
 
+	freeTidOnJoin(toFreeTid);
 
-	// invalid = FirstFila2(&aptos);
-	
-	// if(invalid) {
-
-	// 	printf("erro no initEndThreadContext 2");
-	// }
-	
-	
-
-	// TCB_t *element = (TCB_t*)GetAtIteratorFila2(&aptos);
-
-	// AppendFila2(&executando, element);
-
-	// freeTidOnJoin(&filaJoin, toFreeTid);
-
-
-	// printf("Acabou...escalona...\n");
-
-	//livera quem ta escutando ele
+	//next: freeTidOnWait
 
 	escalonador(executing);
 
@@ -158,23 +154,28 @@ int ccreate (void *(*start)(void *), void *arg, int why) {
 
 	return tid_count++;
 }
-/*
-int freeTidOnJoin(FILA2 *queue, int id){
 
-	int invalid = FirstFila2(queue);
+int freeTidOnJoin(int id){
+
+	int invalid = FirstFila2(&filaJoin);
 
 	Dependance *element;
 
 	while (!invalid){
 
-		element = (Dependance*)GetAtIteratorFila2(queue);
+		element = (Dependance*)GetAtIteratorFila2(&filaJoin);
 
-		if (element->dependant->tid == id) {
+		if (element->dependsOn == id) {
 
 			InsertByPrio(&aptos, element->dependant);
 
-			DeleteAtIteratorFila2(queue);
-			invalid = NextFila2(queue);
+			DeleteAtIteratorFila2(&filaJoin);
+
+			invalid = 1;
+		
+		} else {
+
+			invalid = NextFila2(&filaJoin);
 		}
 	}
 	return 0;
@@ -195,7 +196,6 @@ int findTidAptos(FILA2 *queue, int id){
 			return 1;
 		
 		} else {
-
 
 			invalid = NextFila2(queue);
 		}
@@ -231,8 +231,11 @@ int isAnotherTidWaiting(int tid) {
 	Dependance *element;
 
 	while (!invalid){
+	
 		element = (Dependance*)GetAtIteratorFila2(&filaJoin);
+	
 		if (element->dependsOn == tid)
+	
 			return -1;
 
 		invalid = NextFila2(&filaJoin);
@@ -243,31 +246,25 @@ int isAnotherTidWaiting(int tid) {
 
 int cjoin(int tid) {
 
-	if (!exists(tid) || isAnotherTidWaiting(tid)) {
-	
+	if(!exists(tid) || isAnotherTidWaiting(tid)) {
+		
 		return -1;
 	}
 
-	if (FirstFila2(&executando)) {
-
+	if(FirstFila2(&executando)) {
+		
 		return -1;
 	}
 
 	TCB_t *current = (TCB_t*)GetAtIteratorFila2(&executando);
 
-	if (DeleteAtIteratorFila2(&executando)) {
-
-		return -1;
-	}
+	DeleteAtIteratorFila2(&executando);
 
 	Dependance *newDependance = malloc(sizeof(Dependance));
 	newDependance->dependant = current;
 	newDependance->dependsOn = tid;
 
-	if (AppendFila2(&filaJoin, (void*)newDependance)) {
-
-		return -1;
-	}
+	AppendFila2(&filaJoin, (void*)newDependance);
 
 	if(FirstFila2(&aptos)) {
 
@@ -276,32 +273,28 @@ int cjoin(int tid) {
 
 	TCB_t *next = (TCB_t*)GetAtIteratorFila2(&aptos);
 
-	if (DeleteAtIteratorFila2(&aptos)){
+	DeleteAtIteratorFila2(&aptos);
+		
+	AppendFila2(&executando, next);
 	
-		printf("Erro deletando funcao na fila de aptos\n");
-	}
-	
-	if (AppendFila2(&executando, next)){
-	
-		printf("Erro colocando processo na fila de executando\n");
-	}
-
 	swapcontext(&(current->context), &(next->context));
 
-	printf("ok join %d\n", tid);
-	
 	return 0;
 }
-*/
+
 void escalonador(TCB_t *oldTCB) {
 
 	if(FirstFila2(&aptos)) {
 
 		printf("erro no escalonador\n");
+
+		return;
 	}
 
 	TCB_t *nextToExecute = (TCB_t*)GetAtIteratorFila2(&aptos);
 
+	FirstFila2(&executando);
+	
 	AppendFila2(&executando, nextToExecute);
 
 	DeleteAtIteratorFila2(&aptos);
@@ -313,16 +306,18 @@ int cyield(void) {
 
 	if(FirstFila2(&executando)) {
 
-		printf("erro cyield\n");
+		printf("Erro cyield, erro ou fila vazia\n");
+
+		return -1;
 	}
 
 	TCB_t *toYield = (TCB_t*)GetAtIteratorFila2(&executando);
 
-	AppendFila2(&aptos, toYield);
+	InsertByPrio(&aptos, toYield);
 
 	DeleteAtIteratorFila2(&executando);
 
 	escalonador(toYield);
 
-	return 0;//return error
+	return 0;
 }
