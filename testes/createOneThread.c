@@ -6,19 +6,28 @@
 #include "../include/cthread.h"
 #include "../include/support.h"
 
-void print1(void *pointer) {
+void print1() {
 
-	int x = *(int*)pointer;
-	printf("%d\n", x);
+	FirstFila2(&control.able_threads);
+
+	do {
+		TCB_t* haha =  GetAtIteratorFila2(&control.able_threads);
+		printf("TID: %d PRIO: %d\n", haha->tid, haha->prio);
+	} while(NextFila2(&control.able_threads) == 0);
 
 	cyield();
 
-	printf("%d\n", x*x );
+	//printf("%d\n", x*x );
 }
 
 void print() {
 
-	printf("%d\n", 99);
+	FirstFila2(&control.able_threads);
+
+	do {
+		TCB_t* hihi =  GetAtIteratorFila2(&control.able_threads);
+		printf("TID: %d PRIO: %d\n", hihi->tid, hihi->prio);
+	} while(NextFila2(&control.able_threads) == 0);
 
 	cyield();
 
@@ -27,24 +36,31 @@ void print() {
 
 int main(int argc, char const *argv[])
 {
-	int x = 12;
-	int tidA = ccreate((void*)&print1, (void*)&x, 0);
+	int tidA = ccreate((void*)&print1, NULL, 0);
 	int tidB = ccreate((void*)&print, NULL, 0);
-	printf("%d %d\n", tidA, tidB);
+	int tidC = ccreate((void*)&print, NULL, 0);
+	printf("%d %d %d\n", tidA, tidB, tidC);
 
-	FirstFila2(&control.all_threads);
+	printf("Running Thread: %d\n", control.running_thread->tid);
+
+	FirstFila2(&control.able_threads);
+
+	do {
+		TCB_t* hehe =  GetAtIteratorFila2(&control.able_threads);
+		printf("TID: %d PRIO: %d\n", hehe->tid, hehe->prio);
+	} while(NextFila2(&control.able_threads) == 0);
 
 	//NextFila2(&control.all_threads);
 
-	TCB_t* hehe =  GetAtIteratorFila2(&control.all_threads);
+	//TCB_t* hehe =  GetAtIteratorFila2(&control.all_threads);
 
-	printf("TID: %d\n", hehe->tid);
-
-	cyield();
-
-	printf("entre threads....\n");
+	//printf("PRIO: %d\n", hehe->prio);
 
 	cyield();
+
+	//printf("entre threads....\n");
+
+	//cyield();
 
 	return 0;
 }

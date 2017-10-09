@@ -53,5 +53,6 @@ extern struct _control_threads control;
 
 void init(void);
 void ended_thread(void);
+void dispatcher();
 
 #endif

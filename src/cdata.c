@@ -19,12 +19,13 @@ void init(void){
 	control.all_threads = all_threads;
 	control.able_threads = able_threads;
 	control.init = TRUE;
-  NODE2 main_fila;
 
 	/* Create main thread with TID = 0*/
 	main_thread = (TCB_t*)malloc(sizeof(TCB_t));
 	main_thread->state = PROCST_EXEC;
+  startTimer();
 	main_thread->tid = 0;
+  main_thread->prio = 0;
 
 	/* Insert main thread in all_threads*/
 	AppendFila2(&control.all_threads, main_thread);
@@ -54,4 +55,36 @@ void ended_thread(void){
 
 	//dispatcher();
 
+}
+
+void dispatcher(){
+	TCB_t* next_thread;
+	TCB_t* current_thread = control.running_thread;
+
+	FirstFila2(&control.able_threads);
+  next_thread = (TCB_t *) GetAtIteratorFila2(&control.able_threads);
+	//printf("Next Thread: %d\n", next_thread->tid);
+
+  if(next_thread == NULL) {
+    next_thread = current_thread;
+  }
+
+  if (current_thread->state == PROCST_EXEC){
+		/* If the next thread are the running thread do nothing*/
+		if (next_thread != current_thread){
+			/* Set state of old running thread as APTO and add to able threads*/
+			current_thread->state = PROCST_APTO;
+      current_thread->prio = stopTimer();
+			FirstFila2(&control.able_threads);
+      DeleteAtIteratorFila2(&control.able_threads);
+      InsertByPrio(&control.able_threads, current_thread);
+
+      next_thread->state = PROCST_EXEC;
+      startTimer();
+  		control.running_thread = next_thread;
+			printf("Running Thread: %d\n", control.running_thread->tid);
+			/* Swapping context to new thread*/
+			swapcontext(&current_thread->context, &next_thread->context);
+		}
+	}
 }

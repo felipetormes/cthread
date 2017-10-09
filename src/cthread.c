@@ -133,10 +133,11 @@ int ccreate(void* (*start)(void*), void *arg, int prio){
 
 	new_thread->tid = (last_tid->tid)+1;
 	new_thread->state = PROCST_APTO;
+	new_thread->prio = 0;
 
 	AppendFila2(&control.all_threads, new_thread);
 
-	AppendFila2(&control.able_threads, new_thread);
+	InsertByPrio(&control.able_threads, new_thread);
 
 	/* Return the Thread Identifier*/
 	return new_thread->tid;
@@ -291,20 +292,7 @@ void escalonador(TCB_t *oldTCB) {
 
 int cyield(void) {
 
-	if(FirstFila2(&executando)) {
-
-		printf("Erro cyield, erro ou fila vazia\n");
-
-		return -1;
-	}
-
-	TCB_t *toYield = (TCB_t*)GetAtIteratorFila2(&executando);
-
-	InsertByPrio(&aptos, toYield);
-
-	DeleteAtIteratorFila2(&executando);
-
-	escalonador(toYield);
-
-	return 0;
+	printf("cyield feitoo\n");
+	dispatcher();
+	return TRUE;
 }
