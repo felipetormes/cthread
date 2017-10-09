@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+struct _control_threads control = {.init = FALSE};
+
 #define MEM 100000
 
 struct sJoinDependance {
@@ -73,17 +75,17 @@ ucontext_t* createContext(ucontext_t* returnContext, void (*func)(), int *argc) 
 		makecontext(newContext, (void (*)(void))func, 1, argc);
 
 	} else {
-	
-		makecontext(newContext, (void (*)(void))func, 0);		
+
+		makecontext(newContext, (void (*)(void))func, 0);
 	}
 
-	return newContext;	
+	return newContext;
 }
 
 void finishThread() {
 
 	int invalid = FirstFila2(&executando);
-	
+
 	if(invalid) {
 
 		printf("erro no initEndThreadContext\n");
@@ -109,50 +111,35 @@ void initEndThreadContext() {
 	returnContext = createContext(0, (void*)&finishThread, NULL);
 }
 
-int ccreate (void *(*start)(void *), void *arg, int why) {
+int ccreate(void* (*start)(void*), void *arg, int prio){
+	TCB_t* new_thread;
 
-	static int firstTime = 1; 
-	static int tid_count = 0;
+	/* Check if internal variables was initialized */
+	if(control.init == FALSE)
+		init();
 
-	if(firstTime) {
+	/* Making thread context */
+	new_thread = (TCB_t*) malloc(sizeof(TCB_t));
+	getcontext(&new_thread->context);
+	new_thread->context.uc_stack.ss_sp = (char*) malloc(SIGSTKSZ);
+	new_thread->context.uc_stack.ss_size = SIGSTKSZ;
+	new_thread->context.uc_link = &control.ended_thread;
+	makecontext(&new_thread->context, (void (*)(void))start, 1, arg);
 
-		firstTime=0;
+	/* Changing TCB fields */
 
-		CreateFila2(&aptos);
-		CreateFila2(&executando);
-		CreateFila2(&filaJoin);
-		CreateFila2(&filaWait);
+	LastFila2(&control.all_threads);
+	TCB_t* last_tid = GetAtIteratorFila2(&control.all_threads);
 
-		if (getcontext(&mainContext)){
-			
-			printf("Erro criando contexto para a thread %d\n", tid_count);
-			return -1;
-		}
+	new_thread->tid = (last_tid->tid)+1;
+	new_thread->state = PROCST_APTO;
 
-		TCB_t *mainTCB = malloc(sizeof(TCB_t));
+	AppendFila2(&control.all_threads, new_thread);
 
-		mainTCB->tid = tid_count++;
-		mainTCB->state = PROCST_EXEC;
-		mainTCB->prio = 0;
-		mainTCB->context = mainContext;
+	AppendFila2(&control.able_threads, new_thread);
 
-		AppendFila2(&executando, (void*)mainTCB);
-
-		initEndThreadContext();
-	}
-
-	ucontext_t* newContext = createContext(returnContext, (void*)start, arg);
-
-	TCB_t *newTCB = malloc(sizeof(TCB_t));
-
-	newTCB->tid = tid_count;
-	newTCB->state = PROCST_APTO;
-	newTCB->prio = 0;
-	newTCB->context = *newContext;
-
-	InsertByPrio(&aptos, newTCB);
-
-	return tid_count++;
+	/* Return the Thread Identifier*/
+	return new_thread->tid;
 }
 
 int freeTidOnJoin(int id){
@@ -172,7 +159,7 @@ int freeTidOnJoin(int id){
 			DeleteAtIteratorFila2(&filaJoin);
 
 			invalid = 1;
-		
+
 		} else {
 
 			invalid = NextFila2(&filaJoin);
@@ -182,19 +169,19 @@ int freeTidOnJoin(int id){
 }
 
 int findTidAptos(FILA2 *queue, int id){
-	
+
 	int invalid = FirstFila2(queue);
-	
+
 	TCB_t *element;
 
 	while (!invalid){
-	
+
 		element = (TCB_t*)GetAtIteratorFila2(queue);
 
 		if (element->tid == id) {
-	
+
 			return 1;
-		
+
 		} else {
 
 			invalid = NextFila2(queue);
@@ -221,7 +208,7 @@ int exists(int tid){
 
 
 	return isRunning || findTidAptos(&aptos, tid);// || findTidWait(&filaWait, tid) || findTidJoin(&filaJoin, tid);
-	 	
+
 }
 
 int isAnotherTidWaiting(int tid) {
@@ -231,11 +218,11 @@ int isAnotherTidWaiting(int tid) {
 	Dependance *element;
 
 	while (!invalid){
-	
+
 		element = (Dependance*)GetAtIteratorFila2(&filaJoin);
-	
+
 		if (element->dependsOn == tid)
-	
+
 			return -1;
 
 		invalid = NextFila2(&filaJoin);
@@ -247,12 +234,12 @@ int isAnotherTidWaiting(int tid) {
 int cjoin(int tid) {
 
 	if(!exists(tid) || isAnotherTidWaiting(tid)) {
-		
+
 		return -1;
 	}
 
 	if(FirstFila2(&executando)) {
-		
+
 		return -1;
 	}
 
@@ -274,9 +261,9 @@ int cjoin(int tid) {
 	TCB_t *next = (TCB_t*)GetAtIteratorFila2(&aptos);
 
 	DeleteAtIteratorFila2(&aptos);
-		
+
 	AppendFila2(&executando, next);
-	
+
 	swapcontext(&(current->context), &(next->context));
 
 	return 0;
@@ -294,7 +281,7 @@ void escalonador(TCB_t *oldTCB) {
 	TCB_t *nextToExecute = (TCB_t*)GetAtIteratorFila2(&aptos);
 
 	FirstFila2(&executando);
-	
+
 	AppendFila2(&executando, nextToExecute);
 
 	DeleteAtIteratorFila2(&aptos);

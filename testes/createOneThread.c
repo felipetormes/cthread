@@ -32,8 +32,16 @@ int main(int argc, char const *argv[])
 	int tidB = ccreate((void*)&print, NULL, 0);
 	printf("%d %d\n", tidA, tidB);
 
+	FirstFila2(&control.all_threads);
+
+	//NextFila2(&control.all_threads);
+
+	TCB_t* hehe =  GetAtIteratorFila2(&control.all_threads);
+
+	printf("TID: %d\n", hehe->tid);
+
 	cyield();
-	
+
 	printf("entre threads....\n");
 
 	cyield();

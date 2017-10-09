@@ -1,9 +1,9 @@
 /*
- * cdata.h: arquivo de inclusão de uso apenas na geração da libpithread
+ * cdata.h: arquivo de inclusï¿½o de uso apenas na geraï¿½ï¿½o da libpithread
  *
  * Esse arquivo pode ser modificado. ENTRETANTO, deve ser utilizada a TCB fornecida
  *
- * Versão de 11/09/2017
+ * Versï¿½o de 11/09/2017
  *
  */
 #ifndef __cdata__
@@ -16,20 +16,42 @@
 #define	PROCST_BLOQ	3
 #define	PROCST_TERMINO	4
 
+#define TRUE 0
+#define FALSE -1
+
+#include "support.h"
+
 /* Os campos "tid", "state", "prio" e "context" dessa estrutura devem ser mantidos e usados convenientemente
-   Pode-se acrescentar outros campos APÓS os campos obrigatórios dessa estrutura
+   Pode-se acrescentar outros campos APï¿½S os campos obrigatï¿½rios dessa estrutura
 */
-typedef struct s_TCB { 
+typedef struct s_TCB {
 	int		tid; 		// identificador da thread
 	int		state;		// estado em que a thread se encontra
-					// 0: Criação; 1: Apto; 2: Execução; 3: Bloqueado e 4: Término
+					// 0: Criaï¿½ï¿½o; 1: Apto; 2: Execuï¿½ï¿½o; 3: Bloqueado e 4: Tï¿½rmino
 	unsigned 	int		prio;		// prioridade da thread (higest=0; lowest=3)
-	ucontext_t 	context;	// contexto de execução da thread (SP, PC, GPRs e recursos) 
-	
-	/* Se necessário, pode-se acresecentar campos nessa estrutura A PARTIR DAQUI! */
-	
-	
-} TCB_t; 
+	ucontext_t 	context;	// contexto de execuï¿½ï¿½o da thread (SP, PC, GPRs e recursos)
 
+	/* Se necessï¿½rio, pode-se acresecentar campos nessa estrutura A PARTIR DAQUI! */
+
+
+} TCB_t;
+
+struct _control_threads{
+    /* Verify if the main thread was initialized */
+    int init;
+    /* Tree of all threads */
+    FILA2 all_threads;
+    /* Tree of ablle threads */
+    FILA2 able_threads;
+    /* Current thread pointer running */
+    TCB_t* running_thread;
+	/* UCP to delete a thread that end */
+	ucontext_t ended_thread;
+};
+
+extern struct _control_threads control;
+
+void init(void);
+void ended_thread(void);
 
 #endif
