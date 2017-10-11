@@ -18,4 +18,4 @@ simpleCJoinTest: simpleCJoinTest.c $(LIB_DIR)/libcthread.a
 
 
 clean:
-	rm createOneThread identify *.o
+	rm createOneThread identify simpleCJoinTest *.o

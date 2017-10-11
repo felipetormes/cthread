@@ -12,13 +12,16 @@ void init(void){
 	TCB_t* main_thread;
   FILA2 all_threads;
   FILA2 able_threads;
+	FILA2 join_threads;
 
   CreateFila2(&all_threads);
   CreateFila2(&able_threads);
+	CreateFila2(&join_threads);
 
 	/* Init queues*/
 	control.all_threads = all_threads;
 	control.able_threads = able_threads;
+	control.join_threads = join_threads;
 	control.init = TRUE;
 
 	/* Create main thread with TID = 0*/
@@ -54,28 +57,30 @@ void ended_thread(void){
 
 	control.running_thread->state = PROCST_TERMINO;
 
-	//dispatcher();
+	dispatcher();
 
 }
 
 void dispatcher(){
 	TCB_t* next_thread;
+	TCB_t* to_delete_thread;
 	TCB_t* current_thread = control.running_thread;
 
 	FirstFila2(&control.able_threads);
   next_thread = (TCB_t *) GetAtIteratorFila2(&control.able_threads);
-	//printf("Next Thread: %d\n", next_thread->tid);
+	//printf("Running Thread: %d\n", current_thread->tid);
+	//printf("Next Thread: %d\n\n", next_thread->tid);
 
   if(next_thread == NULL) {
     next_thread = current_thread;
   }
 
-  if (current_thread->state == PROCST_EXEC){
+  if (current_thread->state == PROCST_EXEC) {
 		/* If the next thread are the running thread do nothing*/
 		if (next_thread != current_thread){
 			/* Set state of old running thread as APTO and add to able threads*/
 			current_thread->state = PROCST_APTO;
-      current_thread->prio = stopTimer();
+      current_thread->prio = current_thread->prio + stopTimer();
 			FirstFila2(&control.able_threads);
       DeleteAtIteratorFila2(&control.able_threads);
       InsertByPrio(&control.able_threads, current_thread);
@@ -85,6 +90,81 @@ void dispatcher(){
   		control.running_thread = next_thread;
 			printf("Running Thread: %d\n", control.running_thread->tid);
 			/* Swapping context to new thread*/
+			swapcontext(&current_thread->context, &next_thread->context);
+		}
+	}
+
+	else if(current_thread->state == PROCST_BLOQ) {
+
+		if (next_thread->tid != current_thread->tid) {
+
+			FirstFila2(&control.able_threads);
+      DeleteAtIteratorFila2(&control.able_threads);
+			FirstFila2(&control.able_threads);
+
+			/*fprintf(stderr, "ABLE THREADS\n");
+
+			do {
+		    TCB_t* hehe =  GetAtIteratorFila2(&control.able_threads);
+		    printf("TID: %d PRIO: %d\n", hehe->tid, hehe->prio);
+		  } while(NextFila2(&control.able_threads) == 0);
+			printf("\n");*/
+
+			next_thread->state = PROCST_EXEC;
+      startTimer();
+			control.running_thread = next_thread;
+
+			printf("Running Thread: %d\n", control.running_thread->tid);
+
+			swapcontext(&current_thread->context, &next_thread->context);
+
+		}
+	}
+
+	else if (current_thread->state == PROCST_TERMINO) {
+
+		if(FirstFila2(&control.join_threads) == 0) {
+
+			do {
+				Dependance* joined_thread = GetAtIteratorFila2(&control.join_threads);
+				//fprintf(stderr, "%d\n", joined_thread->dependsOn);
+				if(joined_thread->dependsOn == current_thread->tid) {
+					joined_thread->dependant->state = PROCST_APTO;
+					InsertByPrio(&control.able_threads, joined_thread->dependant);
+					DeleteAtIteratorFila2(&control.join_threads);
+				}
+			} while(NextFila2(&control.join_threads) == 0);
+		}
+
+		FirstFila2(&control.able_threads);
+
+		fprintf(stderr, "ABLE THREADS\n");
+
+		do {
+			TCB_t* hehe =  GetAtIteratorFila2(&control.able_threads);
+			printf("TID: %d PRIO: %d\n", hehe->tid, hehe->prio);
+		} while(NextFila2(&control.able_threads) == 0);
+		printf("\n");
+
+		FirstFila2(&control.all_threads);
+
+		to_delete_thread = GetAtIteratorFila2(&control.all_threads);
+		while(current_thread->tid != to_delete_thread->tid) {
+			NextFila2(&control.all_threads);
+			to_delete_thread = (TCB_t *) GetAtIteratorFila2(&control.all_threads);
+		}
+		DeleteAtIteratorFila2(&control.all_threads);
+
+		FirstFila2(&control.able_threads);
+	  next_thread = (TCB_t *) GetAtIteratorFila2(&control.able_threads);
+
+		if (next_thread != current_thread) {
+			control.running_thread = next_thread;
+			control.running_thread->state = PROCST_EXEC;
+			FirstFila2(&control.able_threads);
+      DeleteAtIteratorFila2(&control.able_threads);
+			printf("Running Thread: %d\n", control.running_thread->tid);
+
 			swapcontext(&current_thread->context, &next_thread->context);
 		}
 	}

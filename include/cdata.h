@@ -39,10 +39,12 @@ typedef struct s_TCB {
 struct _control_threads{
     /* Verify if the main thread was initialized */
     int init;
-    /* Tree of all threads */
+    /* Queue of all threads */
     FILA2 all_threads;
-    /* Tree of ablle threads */
+    /* Queue of able threads */
     FILA2 able_threads;
+		/* Queue of joined threads */
+		FILA2 join_threads;
     /* Current thread pointer running */
     TCB_t* running_thread;
 	/* UCP to delete a thread that end */
@@ -50,6 +52,13 @@ struct _control_threads{
 };
 
 extern struct _control_threads control;
+
+struct sJoinDependance {
+	TCB_t *dependant;
+	int dependsOn;
+};
+
+typedef struct sJoinDependance Dependance;
 
 void init(void);
 void ended_thread(void);

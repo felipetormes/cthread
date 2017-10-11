@@ -13,13 +13,6 @@ struct _control_threads control = {.init = FALSE};
 
 #define MEM 100000
 
-struct sJoinDependance {
-	TCB_t *dependant;
-	int dependsOn;
-};
-
-typedef struct sJoinDependance Dependance;
-
 FILA2 aptos;
 FILA2 executando;
 
@@ -194,67 +187,75 @@ int findTidAptos(FILA2 *queue, int id){
 
 int exists(int tid){
 
-	TCB_t *running;
+	FirstFila2(&control.all_threads);
 
-	int isRunning = 0;
+	do {
+		TCB_t* thread =  GetAtIteratorFila2(&control.all_threads);
+		if(thread->tid == tid) {
+			return TRUE;
+		}
+	} while(NextFila2(&control.all_threads) == 0);
 
-	if(!FirstFila2(&executando)){
-
-		running = (TCB_t*)GetAtIteratorFila2(&executando);
-
-		if (running->tid == tid)
-
-			isRunning = 1;//uma thread pode escutar por ela mesma ou deveria retornar um erro?
-	}
-
-
-	return isRunning || findTidAptos(&aptos, tid);// || findTidWait(&filaWait, tid) || findTidJoin(&filaJoin, tid);
+	return FALSE;
 
 }
 
 int isAnotherTidWaiting(int tid) {
 
-	int invalid = FirstFila2(&filaJoin);
+	int invalid = FirstFila2(&control.join_threads);
 
-	Dependance *element;
+	Dependance* element;
 
 	while (!invalid){
 
-		element = (Dependance*)GetAtIteratorFila2(&filaJoin);
+		element = (Dependance*)GetAtIteratorFila2(&control.join_threads);
 
 		if (element->dependsOn == tid)
 
-			return -1;
+			return TRUE;
 
-		invalid = NextFila2(&filaJoin);
+		invalid = NextFila2(&control.join_threads);
 	}
 
-	return 0;
+	return FALSE;
 }
 
 int cjoin(int tid) {
 
-	if(!exists(tid) || isAnotherTidWaiting(tid)) {
+	printf("CJOIN THREAD %d - WAITING FOR THREAD %d\n\n", control.running_thread->tid, tid);
 
-		return -1;
+	if((exists(tid)==FALSE) || (isAnotherTidWaiting(tid)==TRUE)) {
+		printf("THERE'S ALREADY A THREAD WAITING FOR THREAD %d OR THREAD %d DOESN'T EXIST\n\n", tid, tid);
+		return FALSE;
 	}
 
-	if(FirstFila2(&executando)) {
+	if(control.running_thread->tid == tid) {
 
-		return -1;
+		return FALSE;
 	}
 
-	TCB_t *current = (TCB_t*)GetAtIteratorFila2(&executando);
+	control.running_thread->state = PROCST_BLOQ;
+	control.running_thread->prio = control.running_thread->prio + stopTimer();
 
-	DeleteAtIteratorFila2(&executando);
-
-	Dependance *newDependance = malloc(sizeof(Dependance));
-	newDependance->dependant = current;
+	Dependance* newDependance = (Dependance*) malloc(sizeof(Dependance));
+	newDependance->dependant = control.running_thread;
 	newDependance->dependsOn = tid;
 
-	AppendFila2(&filaJoin, (void*)newDependance);
+	AppendFila2(&control.join_threads, newDependance);
 
-	if(FirstFila2(&aptos)) {
+	FirstFila2(&control.join_threads);
+
+	printf("BLOCKED THREADS\n");
+
+	do {
+		Dependance* hehe =  GetAtIteratorFila2(&control.join_threads);
+		printf("TID: %d PRIO: %d - Waiting for TID: %d\n", hehe->dependant->tid, hehe->dependant->prio, hehe->dependsOn);
+	} while(NextFila2(&control.join_threads) == 0);
+	printf("\n");
+
+	dispatcher();
+
+	/*if(FirstFila2(&aptos)) {
 
 		return -1;
 	}
@@ -265,7 +266,7 @@ int cjoin(int tid) {
 
 	AppendFila2(&executando, next);
 
-	swapcontext(&(current->context), &(next->context));
+	swapcontext(&(current->context), &(next->context));*/
 
 	return 0;
 }
@@ -292,7 +293,18 @@ void escalonador(TCB_t *oldTCB) {
 
 int cyield(void) {
 
-	printf("cyield feitoo\n");
+	printf("CYIELD\n\n");
+
+	FirstFila2(&control.able_threads);
+
+	fprintf(stderr, "ABLE THREADS\n");
+
+	do {
+		TCB_t* hehe =  GetAtIteratorFila2(&control.able_threads);
+		printf("TID: %d PRIO: %d\n", hehe->tid, hehe->prio);
+	} while(NextFila2(&control.able_threads) == 0);
+	printf("\n");
+
 	dispatcher();
 	return TRUE;
 }
