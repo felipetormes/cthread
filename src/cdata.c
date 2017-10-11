@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <ucontext.h>
 
+#include "../include/insert.h"
 #include "../include/cthread.h"
 #include "../include/support.h"
 #include "../include/cdata.h"
