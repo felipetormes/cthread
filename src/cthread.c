@@ -13,6 +13,10 @@ struct _control_threads control = {.init = FALSE};
 
 int cidentify(char *name, int size){
 
+  /* Check if internal variables was initialized */
+	if(control.init == FALSE)
+		init();
+
   char* str ="\nAlfeu Uzai Tavares\nEduardo Bassani Chandelier\nFelipe Barbosa Tormes\n\n";
 
   memcpy(name, str, size);
@@ -58,10 +62,20 @@ int ccreate(void* (*start)(void*), void *arg, int prio){
 
 int cjoin(int tid) {
 
+  /* Check if internal variables was initialized */
+	if(control.init == FALSE)
+		init();
+
+  #if DEBUG == TRUE
 	printf("CJOIN THREAD %d - WAITING FOR THREAD %d\n\n", control.running_thread->tid, tid);
+  #endif
 
 	if((exists(tid)==FALSE) || (isAnotherTidWaiting(tid)==TRUE)) {
+
+    #if DEBUG == TRUE
 		printf("THERE'S ALREADY A THREAD WAITING FOR THREAD %d OR THREAD %d DOESN'T EXIST\n\n", tid, tid);
+    #endif
+
 		return FALSE;
 	}
 
@@ -78,16 +92,7 @@ int cjoin(int tid) {
 	newDependance->dependsOn = tid;
 
 	AppendFila2(&control.join_threads, newDependance);
-
-	FirstFila2(&control.join_threads);
-
-	printf("BLOCKED THREADS\n");
-
-	do {
-		Dependance* hehe =  GetAtIteratorFila2(&control.join_threads);
-		printf("TID: %d PRIO: %d - Waiting for TID: %d\n", hehe->dependant->tid, hehe->dependant->prio, hehe->dependsOn);
-	} while(NextFila2(&control.join_threads) == 0);
-	printf("\n");
+  AppendFila2(&control.blocked_threads, control.running_thread);
 
 	dispatcher();
 
@@ -96,21 +101,13 @@ int cjoin(int tid) {
 
 int cyield(void) {
 
+  /* Check if internal variables was initialized */
+	if(control.init == FALSE)
+		init();
+
+  #if DEBUG == TRUE
 	printf("CYIELD\n\n");
-
-	fprintf(stderr, "ABLE THREADS\n");
-
-  if(FirstFila2(&control.able_threads) == 0) {
-
-  	do {
-  		TCB_t* hehe =  GetAtIteratorFila2(&control.able_threads);
-  		printf("TID: %d PRIO: %d\n", hehe->tid, hehe->prio);
-  	} while(NextFila2(&control.able_threads) == 0);
-  	printf("\n");
-  }
-  else {
-    printf("THERE'S NO ABLE THREADS\n\n");
-  }
+  #endif
 
 	dispatcher();
 	return TRUE;
@@ -122,7 +119,10 @@ int csem_init(csem_t *sem, int count) {
 	if(control.init == FALSE)
 		init();
 
+  #if DEBUG == TRUE
+  printf("CSEM_INIT\n");
   printf("Initializing semaphore with %d resources to be used.\n\n", count);
+  #endif
 
 	/* Set count of the semaphore variable */
 	sem->count = count;
@@ -143,8 +143,10 @@ int cwait(csem_t *sem){
 	if(control.init == FALSE)
 		init();
 
+  #if DEBUG == TRUE
   printf("CWAIT\n");
   printf("There are still %d resources of this semaphore available.\n\n", sem->count);
+  #endif
 
 	/* Test count to see if it still has available resources */
 	if(sem->count <= 0){
@@ -152,9 +154,13 @@ int cwait(csem_t *sem){
 		AppendFila2(sem->fila, (void *)control.running_thread);
 		/* Change state to blocked */
     	control.running_thread->state = PROCST_BLOQ;
+      control.running_thread->prio = control.running_thread->prio + stopTimer();
     	sem->count--;
+      AppendFila2(&control.blocked_threads, control.running_thread);
 
+      #if DEBUG == TRUE
       printf("Thread %d change state to blocked.\n\n", control.running_thread->tid);
+      #endif
 
     	dispatcher();
         return TRUE;
@@ -163,7 +169,10 @@ int cwait(csem_t *sem){
 	else {
 		sem->count--;
 
+    #if DEBUG == TRUE
     printf("Thread %d keep running.\n\n", control.running_thread->tid);
+    #endif
+
   }
 	return TRUE;
 }
@@ -174,7 +183,9 @@ int csignal(csem_t *sem){
 	if(control.init == FALSE)
 		init();
 
+  #if DEBUG == TRUE
   printf("CSIGNAL\n");
+  #endif
 
 	/* Goes to the first item in the FIFO*/
 	FirstFila2(sem->fila);
@@ -186,8 +197,10 @@ int csignal(csem_t *sem){
       /* Increments count to free resources*/
     	sem->count++;
 
+      #if DEBUG == TRUE
       printf("One resource's been released. Thread %d change state to able\n", freeTCB->tid);
       printf("Now there are still %d resources of this semaphore available.\n\n", sem->count);
+      #endif
 
 		    /* Delete item from FIFO, thread is not blocked by the semaphore anymore*/
 			DeleteAtIteratorFila2(sem->fila);
@@ -195,12 +208,23 @@ int csignal(csem_t *sem){
 			freeTCB->state = PROCST_APTO;
 			/* Put the thread in the ables queue so it can run again*/
 			InsertByPrio(&control.able_threads, freeTCB);
+      /* Delete thread from blocked threads queue */
+      TCB_t *temp;
+      FirstFila2(&control.blocked_threads);
+      temp = GetAtIteratorFila2(&control.blocked_threads);
+      while(temp->tid != freeTCB->tid) {
+        NextFila2(&control.blocked_threads);
+        temp = GetAtIteratorFila2(&control.blocked_threads);
+      }
+      DeleteAtIteratorFila2(&control.blocked_threads);
 		}
 		else{
 		   /* There was no resource to be released*/
 
+       #if DEBUG == TRUE
        printf("There was no resource to be released at this semaphore\n\n");
        printf("Now all %d resources of this semaphore are available.\n\n", sem->count+1);
+       #endif
 
 		   return FALSE;
 		}

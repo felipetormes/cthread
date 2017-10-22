@@ -13,15 +13,18 @@ void init(void){
   FILA2 all_threads;
   FILA2 able_threads;
 	FILA2 join_threads;
+	FILA2 blocked_threads;
 
   CreateFila2(&all_threads);
   CreateFila2(&able_threads);
 	CreateFila2(&join_threads);
+	CreateFila2(&blocked_threads);
 
 	/* Init queues*/
 	control.all_threads = all_threads;
 	control.able_threads = able_threads;
 	control.join_threads = join_threads;
+	control.blocked_threads = blocked_threads;
 	control.init = TRUE;
 
 	/* Create main thread with TID = 0*/
@@ -121,7 +124,7 @@ void dispatcher(){
       next_thread->state = PROCST_EXEC;
       startTimer();
   		control.running_thread = next_thread;
-			printf("Running Thread: %d\n", control.running_thread->tid);
+			//printf("Running Thread: %d\n", control.running_thread->tid);
 			/* Swapping context to new thread*/
 			swapcontext(&current_thread->context, &next_thread->context);
 		}
@@ -133,7 +136,7 @@ void dispatcher(){
 
 			FirstFila2(&control.able_threads);
       DeleteAtIteratorFila2(&control.able_threads);
-			FirstFila2(&control.able_threads);
+			//FirstFila2(&control.able_threads);
 
 			/*fprintf(stderr, "ABLE THREADS\n");
 
@@ -147,7 +150,7 @@ void dispatcher(){
       startTimer();
 			control.running_thread = next_thread;
 
-			printf("Running Thread: %d\n", control.running_thread->tid);
+			//printf("Running Thread: %d\n", control.running_thread->tid);
 
 			swapcontext(&current_thread->context, &next_thread->context);
 
@@ -165,10 +168,20 @@ void dispatcher(){
 					joined_thread->dependant->state = PROCST_APTO;
 					InsertByPrio(&control.able_threads, joined_thread->dependant);
 					DeleteAtIteratorFila2(&control.join_threads);
+
+					/* Delete thread from blocked threads queue */
+		      TCB_t *temp;
+		      FirstFila2(&control.blocked_threads);
+		      temp = GetAtIteratorFila2(&control.blocked_threads);
+		      while(temp->tid != joined_thread->dependant->tid) {
+		        NextFila2(&control.blocked_threads);
+		        temp = GetAtIteratorFila2(&control.blocked_threads);
+		      }
+		      DeleteAtIteratorFila2(&control.blocked_threads);
 				}
 			} while(NextFila2(&control.join_threads) == 0);
 		}
-
+/*
 		fprintf(stderr, "ABLE THREADS\n");
 
 	  if(FirstFila2(&control.able_threads) == 0) {
@@ -182,7 +195,7 @@ void dispatcher(){
 	  else {
 	    printf("THERE'S NO ABLE THREADS\n\n");
 	  }
-
+*/
 		FirstFila2(&control.all_threads);
 
 		to_delete_thread = GetAtIteratorFila2(&control.all_threads);
@@ -200,9 +213,42 @@ void dispatcher(){
 			control.running_thread->state = PROCST_EXEC;
 			FirstFila2(&control.able_threads);
       DeleteAtIteratorFila2(&control.able_threads);
-			printf("Running Thread: %d\n", control.running_thread->tid);
+			//printf("Running Thread: %d\n", control.running_thread->tid);
 
 			swapcontext(&current_thread->context, &next_thread->context);
 		}
+	}
+}
+
+void printStatus(void) {
+	
+	printf("Running Thread: %d\n\n", control.running_thread->tid);
+
+	printf("ABLE THREADS\n");
+
+	if(FirstFila2(&control.able_threads) == 0) {
+
+		do {
+			TCB_t* hehe =  GetAtIteratorFila2(&control.able_threads);
+			printf("TID: %d PRIO: %d\n", hehe->tid, hehe->prio);
+		} while(NextFila2(&control.able_threads) == 0);
+		printf("\n");
+	}
+	else {
+		printf("THERE'S NO ABLE THREADS\n\n");
+	}
+
+	printf("BLOCKED THREADS\n");
+
+	if(FirstFila2(&control.blocked_threads) == 0) {
+
+		do {
+			TCB_t* hehe =  GetAtIteratorFila2(&control.blocked_threads);
+			printf("TID: %d PRIO: %d\n", hehe->tid, hehe->prio);
+		} while(NextFila2(&control.blocked_threads) == 0);
+		printf("\n");
+	}
+	else {
+		printf("THERE'S NO BLOCKED THREADS\n\n");
 	}
 }

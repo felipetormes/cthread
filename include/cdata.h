@@ -10,6 +10,8 @@
 #define __cdata__
 #include "ucontext.h"
 
+#define DEBUG FALSE
+
 #define	PROCST_CRIACAO	0
 #define	PROCST_APTO	1
 #define	PROCST_EXEC	2
@@ -45,6 +47,8 @@ struct _control_threads{
     FILA2 able_threads;
 		/* Queue of joined threads */
 		FILA2 join_threads;
+		/* Queue of blocked threads */
+		FILA2 blocked_threads;
     /* Current thread pointer running */
     TCB_t* running_thread;
 	/* UCP to delete a thread that end */
@@ -65,5 +69,6 @@ void ended_thread(void);
 int exists(int tid);
 int isAnotherTidWaiting(int tid);
 void dispatcher();
+void printStatus(void);
 
 #endif

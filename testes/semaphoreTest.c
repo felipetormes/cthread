@@ -52,11 +52,11 @@ int main(int argc, char const *argv[])
 
   printf("\nINITIALIZING THREAD MAIN\n\n");
 
-	int tidA = ccreate((void*)&print1, NULL, 0);
+	ccreate((void*)&print1, NULL, 0);
 	int tidB = ccreate((void*)&print, NULL, 0);
 
   csem_init(&test_sem, 1);
-
+/*
 	printf("Running Thread: %d\n\n", control.running_thread->tid);
 
   FirstFila2(&control.able_threads);
@@ -68,7 +68,7 @@ int main(int argc, char const *argv[])
     printf("TID: %d PRIO: %d\n", hehe->tid, hehe->prio);
   } while(NextFila2(&control.able_threads) == 0);
   printf("\n");
-
+*/
   cwait(&test_sem);
 
 	cyield();
@@ -77,6 +77,8 @@ int main(int argc, char const *argv[])
 
 	cjoin(tidB);
 	printf("segunda tem que ter termiando\n");
+
+  cyield();
 
   printf("FINISHING THE EXECUTION OF THE THREAD MAIN\n\n");
 
