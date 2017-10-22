@@ -62,6 +62,8 @@ typedef struct sJoinDependance Dependance;
 
 void init(void);
 void ended_thread(void);
+int exists(int tid);
+int isAnotherTidWaiting(int tid);
 void dispatcher();
 
 #endif

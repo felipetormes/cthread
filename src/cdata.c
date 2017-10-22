@@ -61,6 +61,39 @@ void ended_thread(void){
 
 }
 
+int exists(int tid){
+
+	FirstFila2(&control.all_threads);
+
+	do {
+		TCB_t* thread =  GetAtIteratorFila2(&control.all_threads);
+		if(thread->tid == tid) {
+			return TRUE;
+		}
+	} while(NextFila2(&control.all_threads) == 0);
+
+	return FALSE;
+}
+
+int isAnotherTidWaiting(int tid) {
+
+	int invalid = FirstFila2(&control.join_threads);
+
+	Dependance* element;
+
+	while (!invalid){
+
+		element = (Dependance*)GetAtIteratorFila2(&control.join_threads);
+
+		if (element->dependsOn == tid)
+
+			return TRUE;
+
+		invalid = NextFila2(&control.join_threads);
+	}
+	return FALSE;
+}
+
 void dispatcher(){
 	TCB_t* next_thread;
 	TCB_t* to_delete_thread;
@@ -136,15 +169,19 @@ void dispatcher(){
 			} while(NextFila2(&control.join_threads) == 0);
 		}
 
-		FirstFila2(&control.able_threads);
-
 		fprintf(stderr, "ABLE THREADS\n");
 
-		do {
-			TCB_t* hehe =  GetAtIteratorFila2(&control.able_threads);
-			printf("TID: %d PRIO: %d\n", hehe->tid, hehe->prio);
-		} while(NextFila2(&control.able_threads) == 0);
-		printf("\n");
+	  if(FirstFila2(&control.able_threads) == 0) {
+
+	  	do {
+	  		TCB_t* hehe =  GetAtIteratorFila2(&control.able_threads);
+	  		printf("TID: %d PRIO: %d\n", hehe->tid, hehe->prio);
+	  	} while(NextFila2(&control.able_threads) == 0);
+	  	printf("\n");
+	  }
+	  else {
+	    printf("THERE'S NO ABLE THREADS\n\n");
+	  }
 
 		FirstFila2(&control.all_threads);
 

@@ -11,22 +11,6 @@
 
 struct _control_threads control = {.init = FALSE};
 
-#define MEM 100000
-
-FILA2 aptos;
-FILA2 executando;
-
-//bloqueados
-FILA2 filaJoin;
-FILA2 filaWait;
-
-ucontext_t mainContext;
-ucontext_t* returnContext;
-
-
-int freeTidOnJoin(int id);
-void escalonador(TCB_t *oldTCB);
-
 int cidentify(char *name, int size){
 
   char* str ="\nAlfeu Uzai Tavares\nEduardo Bassani Chandelier\nFelipe Barbosa Tormes\n\n";
@@ -38,70 +22,6 @@ int cidentify(char *name, int size){
 		name[size-1] = '\0';
 	return 0;
 
-}
-
-TCB_t* getRemoveFirst(FILA2 *queue) {
-
-	if(FirstFila2(queue)) {
-
-		return NULL;
-	}
-
-	TCB_t *next = (TCB_t*)GetAtIteratorFila2(&aptos);
-
-	DeleteAtIteratorFila2(&aptos);
-
-	return next;
-}
-
-ucontext_t* createContext(ucontext_t* returnContext, void (*func)(), int *argc) {
-
-	ucontext_t* newContext = (ucontext_t*)malloc(sizeof(ucontext_t));
-	getcontext(newContext);
-	newContext->uc_link= returnContext;
-	newContext->uc_stack.ss_sp=malloc(MEM);
-	newContext->uc_stack.ss_size=MEM;
-	newContext->uc_stack.ss_flags=0;
-
-	if(argc) {
-
-		makecontext(newContext, (void (*)(void))func, 1, argc);
-
-	} else {
-
-		makecontext(newContext, (void (*)(void))func, 0);
-	}
-
-	return newContext;
-}
-
-void finishThread() {
-
-	int invalid = FirstFila2(&executando);
-
-	if(invalid) {
-
-		printf("erro no initEndThreadContext\n");
-	}
-
-	TCB_t *executing = (TCB_t*)GetAtIteratorFila2(&executando);
-
-	int toFreeTid = executing->tid;
-
-	DeleteAtIteratorFila2(&executando);
-
-	freeTidOnJoin(toFreeTid);
-
-	//next: freeTidOnWait
-
-	escalonador(executing);
-
-
-}
-
-void initEndThreadContext() {
-
-	returnContext = createContext(0, (void*)&finishThread, NULL);
 }
 
 int ccreate(void* (*start)(void*), void *arg, int prio){
@@ -134,90 +54,6 @@ int ccreate(void* (*start)(void*), void *arg, int prio){
 
 	/* Return the Thread Identifier*/
 	return new_thread->tid;
-}
-
-int freeTidOnJoin(int id){
-
-	int invalid = FirstFila2(&filaJoin);
-
-	Dependance *element;
-
-	while (!invalid){
-
-		element = (Dependance*)GetAtIteratorFila2(&filaJoin);
-
-		if (element->dependsOn == id) {
-
-			InsertByPrio(&aptos, element->dependant);
-
-			DeleteAtIteratorFila2(&filaJoin);
-
-			invalid = 1;
-
-		} else {
-
-			invalid = NextFila2(&filaJoin);
-		}
-	}
-	return 0;
-}
-
-int findTidAptos(FILA2 *queue, int id){
-
-	int invalid = FirstFila2(queue);
-
-	TCB_t *element;
-
-	while (!invalid){
-
-		element = (TCB_t*)GetAtIteratorFila2(queue);
-
-		if (element->tid == id) {
-
-			return 1;
-
-		} else {
-
-			invalid = NextFila2(queue);
-		}
-	}
-	return 0;
-}
-
-
-int exists(int tid){
-
-	FirstFila2(&control.all_threads);
-
-	do {
-		TCB_t* thread =  GetAtIteratorFila2(&control.all_threads);
-		if(thread->tid == tid) {
-			return TRUE;
-		}
-	} while(NextFila2(&control.all_threads) == 0);
-
-	return FALSE;
-
-}
-
-int isAnotherTidWaiting(int tid) {
-
-	int invalid = FirstFila2(&control.join_threads);
-
-	Dependance* element;
-
-	while (!invalid){
-
-		element = (Dependance*)GetAtIteratorFila2(&control.join_threads);
-
-		if (element->dependsOn == tid)
-
-			return TRUE;
-
-		invalid = NextFila2(&control.join_threads);
-	}
-
-	return FALSE;
 }
 
 int cjoin(int tid) {
@@ -255,56 +91,118 @@ int cjoin(int tid) {
 
 	dispatcher();
 
-	/*if(FirstFila2(&aptos)) {
-
-		return -1;
-	}
-
-	TCB_t *next = (TCB_t*)GetAtIteratorFila2(&aptos);
-
-	DeleteAtIteratorFila2(&aptos);
-
-	AppendFila2(&executando, next);
-
-	swapcontext(&(current->context), &(next->context));*/
-
 	return 0;
-}
-
-void escalonador(TCB_t *oldTCB) {
-
-	if(FirstFila2(&aptos)) {
-
-		printf("erro no escalonador\n");
-
-		return;
-	}
-
-	TCB_t *nextToExecute = (TCB_t*)GetAtIteratorFila2(&aptos);
-
-	FirstFila2(&executando);
-
-	AppendFila2(&executando, nextToExecute);
-
-	DeleteAtIteratorFila2(&aptos);
-
-	swapcontext(&(oldTCB->context), &(nextToExecute->context));
 }
 
 int cyield(void) {
 
 	printf("CYIELD\n\n");
 
-	FirstFila2(&control.able_threads);
-
 	fprintf(stderr, "ABLE THREADS\n");
 
-	do {
-		TCB_t* hehe =  GetAtIteratorFila2(&control.able_threads);
-		printf("TID: %d PRIO: %d\n", hehe->tid, hehe->prio);
-	} while(NextFila2(&control.able_threads) == 0);
-	printf("\n");
+  if(FirstFila2(&control.able_threads) == 0) {
+
+  	do {
+  		TCB_t* hehe =  GetAtIteratorFila2(&control.able_threads);
+  		printf("TID: %d PRIO: %d\n", hehe->tid, hehe->prio);
+  	} while(NextFila2(&control.able_threads) == 0);
+  	printf("\n");
+  }
+  else {
+    printf("THERE'S NO ABLE THREADS\n\n");
+  }
 
 	dispatcher();
+	return TRUE;
+}
+
+int csem_init(csem_t *sem, int count) {
+
+	/* Check if internal variables was initialized */
+	if(control.init == FALSE)
+		init();
+
+  printf("Initializing semaphore with %d resources to be used.\n\n", count);
+
+	/* Set count of the semaphore variable */
+	sem->count = count;
+	/* Allocate FIFO */
+	sem->fila = (PFILA2) malloc(sizeof(PFILA2));
+	/* If it allocated ... */
+	if (sem->fila == NULL)
+		return FALSE;
+	/* Create FIFO, if it returned 0, it was successfully created */
+	if(CreateFila2(sem->fila) == 0)
+		return TRUE;
+	return FALSE;
+}
+
+int cwait(csem_t *sem){
+
+	/* Check if internal variables was initialized */
+	if(control.init == FALSE)
+		init();
+
+  printf("CWAIT\n");
+  printf("There are still %d resources of this semaphore available.\n\n", sem->count);
+
+	/* Test count to see if it still has available resources */
+	if(sem->count <= 0){
+	    /* Put running thread in the semaphore FIFO */
+		AppendFila2(sem->fila, (void *)control.running_thread);
+		/* Change state to blocked */
+    	control.running_thread->state = PROCST_BLOQ;
+    	sem->count--;
+
+      printf("Thread %d change state to blocked.\n\n", control.running_thread->tid);
+
+    	dispatcher();
+        return TRUE;
+	}
+	/* If it has available resources it needs to decrement count and keep running the thread*/
+	else {
+		sem->count--;
+
+    printf("Thread %d keep running.\n\n", control.running_thread->tid);
+  }
+	return TRUE;
+}
+
+int csignal(csem_t *sem){
+
+	/* Check if internal variables was initialized */
+	if(control.init == FALSE)
+		init();
+
+  printf("CSIGNAL\n");
+
+	/* Goes to the first item in the FIFO*/
+	FirstFila2(sem->fila);
+		TCB_t *freeTCB;
+		/* Get the first item in FIFO that will be freed*/
+		freeTCB = GetAtIteratorFila2(sem->fila);
+		if(freeTCB != NULL){
+
+      /* Increments count to free resources*/
+    	sem->count++;
+
+      printf("One resource's been released. Thread %d change state to able\n", freeTCB->tid);
+      printf("Now there are still %d resources of this semaphore available.\n\n", sem->count);
+
+		    /* Delete item from FIFO, thread is not blocked by the semaphore anymore*/
+			DeleteAtIteratorFila2(sem->fila);
+			/* Change state to 'able' */
+			freeTCB->state = PROCST_APTO;
+			/* Put the thread in the ables queue so it can run again*/
+			InsertByPrio(&control.able_threads, freeTCB);
+		}
+		else{
+		   /* There was no resource to be released*/
+
+       printf("There was no resource to be released at this semaphore\n\n");
+       printf("Now all %d resources of this semaphore are available.\n\n", sem->count+1);
+
+		   return FALSE;
+		}
 	return TRUE;
 }
