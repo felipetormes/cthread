@@ -1,8 +1,13 @@
 all: libcthread
 
-libcthread:
-	gcc -m32 -c src/cthread.c src/cdata.c -Wall
-	ar crs lib/libcthread.a cthread.o cdata.o bin/support.o
+libcthread: cthread cdata
+	ar crs lib/libcthread.a bin/cthread.o bin/cdata.o bin/support.o
+
+cthread: src/cthread.c
+	gcc -m32 -c -o bin/cthread.o src/cthread.c
+
+cdata: src/cdata.c
+	gcc -m32 -c -o bin/cdata.o src/cdata.c
 
 clean:
-	rm *.o lib/libcthread.a
+	rm bin/cthread.o bin/cdata.o lib/libcthread.a
