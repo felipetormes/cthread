@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ucontext.h>
+#include<signal.h>
 
 #include "../include/insert.h"
 #include "../include/cthread.h"

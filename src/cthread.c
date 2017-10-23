@@ -1,9 +1,9 @@
 #include "../include/cthread.h"
 #include "../include/cdata.h"
 #include "../include/support.h"
+#include <signal.h>
 
 #include "insert.c"
-
 #include <ucontext.h>
 #include <stdio.h>
 #include <stdlib.h>
