@@ -50,7 +50,7 @@ int ccreate(void* (*start)(void*), void *arg, int prio){
 
 	new_thread->tid = (last_tid->tid)+1;
 	new_thread->state = PROCST_APTO;
-	new_thread->prio = 0;
+	new_thread->prio = prio;
 
 	AppendFila2(&control.all_threads, new_thread);
 
